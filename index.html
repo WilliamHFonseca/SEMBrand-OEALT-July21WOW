@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Métricas SEM-Brand</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Estilos personalizados y animaciones */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Paleta de colores de la marca */
+        :root {
+            /* Colores de la marca Open English */
+            --oe-blue: #0077FF;
+            --oe-orange: #FF6600;
+            --oe-green: #34D399;
+            --oe-red: #EF4444;
+            --oe-dark-blue: #0A2540;
+            
+            /* Colores para gráficos según la imagen */
+            --chart-light-blue: #96DCF8;
+            --chart-dark-blue: #0B76A0;
+        }
+
+        /* Animación de entrada */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out forwards; }
+
+        /* Animación de pulso para métricas críticas */
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        }
+        .pulse-critical { animation: pulse-red 2s infinite; }
+
+        /* Estilos para el gráfico */
+        .chart-container {
+            position: relative;
+            height: 45vh;
+            width: 100%;
+        }
+        
+        /* Estilos para los botones de país y conmutador de gráficos */
+        .control-btn {
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .control-btn.active {
+            background-color: var(--oe-dark-blue);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <!-- Cabecera con selector de país -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center animate-fadeInUp" style="animation-delay: 100ms;">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-[var(--oe-dark-blue)] leading-tight">Métricas</h1>
+                <h2 class="text-2xl md:text-3xl font-bold text-[var(--oe-blue)] leading-tight">SEM-Brand</h2>
+            </div>
+            <div id="country-selector" class="flex flex-wrap gap-2 mt-4 md:mt-0 justify-start md:justify-end">
+                <button data-country="Argentina" class="control-btn active bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">Argentina</button>
+                <button data-country="Mexico" class="control-btn bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">México</button>
+                <button data-country="Colombia" class="control-btn bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">Colombia</button>
+                <button data-country="Chile" class="control-btn bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">Chile</button>
+                <button data-country="Peru" class="control-btn bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">Perú</button>
+                <button data-country="Other Latam" class="control-btn bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg text-sm">Other Latam</button>
+            </div>
+        </header>
+
+        <!-- Sección de Métricas del Último Día -->
+        <section id="metrics-section" class="mb-12">
+            <h2 class="text-2xl font-semibold text-[var(--oe-dark-blue)] mb-4 animate-fadeInUp" style="animation-delay: 200ms;">
+                Resumen del Último Día: <span id="latest-date" class="text-[var(--oe-dark-blue)]"></span>
+            </h2>
+            <div id="latest-metrics-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+                <!-- Las tarjetas de métricas se insertarán aquí dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Sección de Gráficos Históricos -->
+        <section id="charts-section" class="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-slate-200 animate-fadeInUp" style="animation-delay: 400ms;">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                <h3 class="font-bold text-lg text-[var(--oe-dark-blue)] mb-3 sm:mb-0">Actual vs Comportamiento de los últimos 7 Lunes</h3>
+                <div id="chart-toggle-buttons" class="flex items-center bg-slate-100 p-1 rounded-lg">
+                    <button id="btn-impr-clicks" class="control-btn active text-sm font-semibold py-2 px-4 rounded-md">Impr & Clicks</button>
+                    <button id="btn-sess-leads" class="control-btn text-sm font-semibold py-2 px-4 rounded-md">Sess & Lead Sub</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="imprClicksChart"></canvas>
+                <canvas id="sessLeadsChart" style="display: none;"></canvas>
+            </div>
+        </section>
+
+        <!-- Sección de Conclusión -->
+        <section class="mt-10 animate-fadeInUp" style="animation-delay: 500ms;">
+             <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                <h3 class="font-bold text-lg text-[var(--oe-dark-blue)] mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--oe-orange)] mr-2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Conclusión Analítica
+                </h3>
+                <p id="conclusion-text" class="text-slate-600 text-sm md:text-base leading-relaxed">
+                    <!-- El texto de la conclusión se insertará aquí -->
+                </p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- BASE DE DATOS ---
+        const allData = {
+            'Argentina': [
+                { date: '06/02/2025', impressions: 2371, clicks: 724, ctr: '30.5%', sessions: 884, leadSubmission: 106, lr: '12.0%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 2111, clicks: 663, ctr: '31.4%', sessions: 778, leadSubmission: 70, lr: '9.0%', impressionsWow: -11, clicksWow: -8.4, ctrWow: 0.9, sessionsWow: -12.0, leadSubmissionWow: -34.0, lrWow: -3.0 },
+                { date: '06/16/2025', impressions: 1493, clicks: 482, ctr: '32.3%', sessions: 640, leadSubmission: 50, lr: '7.8%', impressionsWow: -29, clicksWow: -27.3, ctrWow: 0.9, sessionsWow: -17.7, leadSubmissionWow: -28.6, lrWow: -1.2 },
+                { date: '06/23/2025', impressions: 2513, clicks: 884, ctr: '35.2%', sessions: 933, leadSubmission: 50, lr: '5.4%', impressionsWow: 68, clicksWow: 83.4, ctrWow: 2.9, sessionsWow: 45.8, leadSubmissionWow: 0.0, lrWow: -2.5 },
+                { date: '06/30/2025', impressions: 1749, clicks: 563, ctr: '32.2%', sessions: 683, leadSubmission: 54, lr: '7.9%', impressionsWow: -30, clicksWow: -36.3, ctrWow: -3.0, sessionsWow: -26.8, leadSubmissionWow: 8.0, lrWow: 2.5 },
+                { date: '07/07/2025', impressions: 1892, clicks: 605, ctr: '32.0%', sessions: 723, leadSubmission: 61, lr: '8.4%', impressionsWow: 8, clicksWow: 7.5, ctrWow: -0.2, sessionsWow: 5.9, leadSubmissionWow: 13.0, lrWow: 0.5 },
+                { date: '07/14/2025', impressions: 1704, clicks: 570, ctr: '33.5%', sessions: 668, leadSubmission: 81, lr: '12.1%', impressionsWow: -10, clicksWow: -5.8, ctrWow: 1.5, sessionsWow: -7.6, leadSubmissionWow: 32.8, lrWow: 3.7 },
+                { date: '07/21/2025', impressions: 1814, clicks: 571, ctr: '31.5%', sessions: 481, leadSubmission: 11, lr: '2.3%', impressionsWow: 6, clicksWow: 0.2, ctrWow: -2.0, sessionsWow: -28.0, leadSubmissionWow: -86.4, lrWow: -9.8 }
+            ],
+            'Mexico': [
+                { date: '06/02/2025', impressions: 5048, clicks: 1875, ctr: '37.1%', sessions: 1980, leadSubmission: 208, lr: '10.5%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 4713, clicks: 1721, ctr: '36.5%', sessions: 1835, leadSubmission: 197, lr: '10.7%', impressionsWow: -6.6, clicksWow: -8.2, ctrWow: -0.6, sessionsWow: -7.3, leadSubmissionWow: -5.3, lrWow: 0.2 },
+                { date: '06/16/2025', impressions: 4621, clicks: 1712, ctr: '37.0%', sessions: 1844, leadSubmission: 177, lr: '9.6%', impressionsWow: -2.0, clicksWow: -0.5, ctrWow: 0.5, sessionsWow: 0.5, leadSubmissionWow: -10.2, lrWow: -1.1 },
+                { date: '06/23/2025', impressions: 6156, clicks: 2309, ctr: '37.5%', sessions: 2260, leadSubmission: 174, lr: '7.7%', impressionsWow: 33.2, clicksWow: 34.9, ctrWow: 0.5, sessionsWow: 22.6, leadSubmissionWow: -1.7, lrWow: -1.9 },
+                { date: '06/30/2025', impressions: 4537, clicks: 1607, ctr: '35.4%', sessions: 1811, leadSubmission: 171, lr: '9.4%', impressionsWow: -26.3, clicksWow: -30.4, ctrWow: -2.1, sessionsWow: -19.9, leadSubmissionWow: -1.7, lrWow: 1.7 },
+                { date: '07/07/2025', impressions: 4839, clicks: 1728, ctr: '35.7%', sessions: 1889, leadSubmission: 181, lr: '9.7%', impressionsWow: 6.7, clicksWow: 7.5, ctrWow: 0.3, sessionsWow: 3.2, leadSubmissionWow: 5.8, lrWow: 0.2 },
+                { date: '07/14/2025', impressions: 4671, clicks: 1676, ctr: '35.9%', sessions: 1810, leadSubmission: 150, lr: '8.3%', impressionsWow: -3.5, clicksWow: -3.0, ctrWow: 0.2, sessionsWow: -3.2, leadSubmissionWow: -17.1, lrWow: -1.4 },
+                { date: '07/21/2025', impressions: 4440, clicks: 1593, ctr: '35.9%', sessions: 1329, leadSubmission: 25, lr: '1.9%', impressionsWow: -4.9, clicksWow: -5.0, ctrWow: 0.0, sessionsWow: -26.6, leadSubmissionWow: -83.3, lrWow: -6.4 }
+            ],
+            'Colombia': [
+                { date: '06/02/2025', impressions: 4491, clicks: 1546, ctr: '34.4%', sessions: 1569, leadSubmission: 135, lr: '8.6%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 5718, clicks: 2079, ctr: '36.4%', sessions: 2082, leadSubmission: 145, lr: '7.0%', impressionsWow: 27.3, clicksWow: 34.5, ctrWow: 1.9, sessionsWow: 32.7, leadSubmissionWow: 7.4, lrWow: -1.6 },
+                { date: '06/16/2025', impressions: 5806, clicks: 2241, ctr: '38.6%', sessions: 2242, leadSubmission: 143, lr: '6.4%', impressionsWow: 1.5, clicksWow: 7.8, ctrWow: 2.2, sessionsWow: 7.7, leadSubmissionWow: -1.4, lrWow: -0.6 },
+                { date: '06/23/2025', impressions: 5505, clicks: 2094, ctr: '38.0%', sessions: 1903, leadSubmission: 116, lr: '6.1%', impressionsWow: -5.2, clicksWow: -6.6, ctrWow: -0.6, sessionsWow: -15.1, leadSubmissionWow: -18.9, lrWow: -0.3 },
+                { date: '06/30/2025', impressions: 3544, clicks: 1306, ctr: '36.9%', sessions: 1239, leadSubmission: 82, lr: '6.6%', impressionsWow: -35.6, clicksWow: -37.6, ctrWow: -1.2, sessionsWow: -34.9, leadSubmissionWow: -29.3, lrWow: 0.5 },
+                { date: '07/07/2025', impressions: 6277, clicks: 2316, ctr: '36.9%', sessions: 2349, leadSubmission: 178, lr: '7.6%', impressionsWow: 77.1, clicksWow: 77.3, ctrWow: 0.0, sessionsWow: 89.6, leadSubmissionWow: 117.1, lrWow: 1.0 },
+                { date: '07/14/2025', impressions: 5955, clicks: 2184, ctr: '36.7%', sessions: 2162, leadSubmission: 141, lr: '6.5%', impressionsWow: -5.1, clicksWow: -5.7, ctrWow: -0.2, sessionsWow: -8.0, leadSubmissionWow: -20.8, lrWow: -1.1 },
+                { date: '07/21/2025', impressions: 5819, clicks: 2154, ctr: '37.0%', sessions: 1674, leadSubmission: 31, lr: '1.9%', impressionsWow: -2.3, clicksWow: -1.4, ctrWow: 0.3, sessionsWow: -22.6, leadSubmissionWow: -78.0, lrWow: -4.7 }
+            ], 
+            'Chile': [
+                { date: '06/02/2025', impressions: 1976, clicks: 715, ctr: '36.2%', sessions: 746, leadSubmission: 56, lr: '7.5%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 1808, clicks: 645, ctr: '35.7%', sessions: 702, leadSubmission: 59, lr: '8.4%', impressionsWow: -8.5, clicksWow: -9.8, ctrWow: -0.5, sessionsWow: -5.9, leadSubmissionWow: 5.4, lrWow: 0.9 },
+                { date: '06/16/2025', impressions: 1794, clicks: 629, ctr: '35.1%', sessions: 678, leadSubmission: 51, lr: '7.5%', impressionsWow: -0.8, clicksWow: -2.5, ctrWow: -0.6, sessionsWow: -3.4, leadSubmissionWow: -13.6, lrWow: -0.9 },
+                { date: '06/23/2025', impressions: 2261, clicks: 816, ctr: '36.1%', sessions: 917, leadSubmission: 58, lr: '6.3%', impressionsWow: 26.0, clicksWow: 29.7, ctrWow: 1.0, sessionsWow: 35.3, leadSubmissionWow: 13.7, lrWow: -1.2 },
+                { date: '06/30/2025', impressions: 1368, clicks: 535, ctr: '39.1%', sessions: 652, leadSubmission: 41, lr: '6.3%', impressionsWow: -39.5, clicksWow: -34.4, ctrWow: 3.0, sessionsWow: -28.9, leadSubmissionWow: -29.3, lrWow: 0.0 },
+                { date: '07/07/2025', impressions: 1414, clicks: 550, ctr: '38.9%', sessions: 694, leadSubmission: 48, lr: '6.9%', impressionsWow: 3.4, clicksWow: 2.8, ctrWow: -0.2, sessionsWow: 6.4, leadSubmissionWow: 17.1, lrWow: 0.6 },
+                { date: '07/14/2025', impressions: 1429, clicks: 591, ctr: '41.4%', sessions: 732, leadSubmission: 51, lr: '7.0%', impressionsWow: 1.1, clicksWow: 7.5, ctrWow: 2.5, sessionsWow: 5.5, leadSubmissionWow: 6.3, lrWow: 0.1 },
+                { date: '07/21/2025', impressions: 1388, clicks: 538, ctr: '38.8%', sessions: 497, leadSubmission: 5, lr: '1.0%', impressionsWow: -2.9, clicksWow: -9.0, ctrWow: -2.6, sessionsWow: -32.1, leadSubmissionWow: -90.2, lrWow: -6.0 }
+            ], 
+            'Peru': [
+                { date: '06/02/2025', impressions: 874, clicks: 276, ctr: '31.6%', sessions: 361, leadSubmission: 55, lr: '15.2%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 795, clicks: 241, ctr: '30.3%', sessions: 324, leadSubmission: 41, lr: '12.7%', impressionsWow: -9.0, clicksWow: -12.7, ctrWow: -1.3, sessionsWow: -10.2, leadSubmissionWow: -25.5, lrWow: -2.6 },
+                { date: '06/16/2025', impressions: 754, clicks: 241, ctr: '32.0%', sessions: 274, leadSubmission: 31, lr: '11.3%', impressionsWow: -5.2, clicksWow: 0.0, ctrWow: 1.6, sessionsWow: -15.4, leadSubmissionWow: -24.4, lrWow: -1.3 },
+                { date: '06/23/2025', impressions: 1212, clicks: 386, ctr: '31.8%', sessions: 422, leadSubmission: 42, lr: '10.0%', impressionsWow: 60.7, clicksWow: 68.2, ctrWow: -0.1, sessionsWow: 54.0, leadSubmissionWow: 35.5, lrWow: -1.4 },
+                { date: '06/30/2025', impressions: 913, clicks: 284, ctr: '31.1%', sessions: 388, leadSubmission: 36, lr: '9.3%', impressionsWow: -24.7, clicksWow: -26.4, ctrWow: -0.7, sessionsWow: -8.1, leadSubmissionWow: -14.3, lrWow: -0.7 },
+                { date: '07/07/2025', impressions: 1067, clicks: 341, ctr: '32.0%', sessions: 455, leadSubmission: 40, lr: '8.8%', impressionsWow: 16.9, clicksWow: 20.1, ctrWow: 0.9, sessionsWow: 17.3, leadSubmissionWow: 11.1, lrWow: -0.5 },
+                { date: '07/14/2025', impressions: 1026, clicks: 294, ctr: '28.7%', sessions: 436, leadSubmission: 24, lr: '5.5%', impressionsWow: -3.8, clicksWow: -13.8, ctrWow: -3.3, sessionsWow: -4.2, leadSubmissionWow: -40.0, lrWow: -3.3 },
+                { date: '07/21/2025', impressions: 831, clicks: 250, ctr: '30.1%', sessions: 262, leadSubmission: 7, lr: '2.7%', impressionsWow: -19.0, clicksWow: -15.0, ctrWow: 1.4, sessionsWow: -39.9, leadSubmissionWow: -70.8, lrWow: -2.8 }
+            ], 
+            'Other Latam': [
+                { date: '06/02/2025', impressions: 7836, clicks: 2787, ctr: '35.6%', sessions: 1125, leadSubmission: 88, lr: '7.8%', impressionsWow: null, clicksWow: null, ctrWow: null, sessionsWow: null, leadSubmissionWow: null, lrWow: null },
+                { date: '06/09/2025', impressions: 7329, clicks: 2519, ctr: '34.4%', sessions: 1056, leadSubmission: 88, lr: '8.3%', impressionsWow: -6.5, clicksWow: -9.6, ctrWow: -1.2, sessionsWow: -6.1, leadSubmissionWow: 0.0, lrWow: 0.5 },
+                { date: '06/16/2025', impressions: 7109, clicks: 2528, ctr: '35.6%', sessions: 1053, leadSubmission: 83, lr: '7.9%', impressionsWow: -3.0, clicksWow: 0.4, ctrWow: 1.2, sessionsWow: -0.3, leadSubmissionWow: -5.7, lrWow: -0.5 },
+                { date: '06/23/2025', impressions: 9677, clicks: 3531, ctr: '36.5%', sessions: 1241, leadSubmission: 83, lr: '6.7%', impressionsWow: 36.1, clicksWow: 39.7, ctrWow: 0.9, sessionsWow: 17.9, leadSubmissionWow: 0.0, lrWow: -1.2 },
+                { date: '06/30/2025', impressions: 6965, clicks: 2384, ctr: '34.2%', sessions: 883, leadSubmission: 53, lr: '6.0%', impressionsWow: -28.0, clicksWow: -32.5, ctrWow: -2.3, sessionsWow: -28.8, leadSubmissionWow: -36.1, lrWow: -0.7 },
+                { date: '07/07/2025', impressions: 7688, clicks: 2643, ctr: '34.4%', sessions: 984, leadSubmission: 53, lr: '5.4%', impressionsWow: 10.4, clicksWow: 10.9, ctrWow: 0.1, sessionsWow: 11.4, leadSubmissionWow: 0.0, lrWow: -0.6 },
+                { date: '07/14/2025', impressions: 7578, clicks: 2552, ctr: '33.7%', sessions: 952, leadSubmission: 58, lr: '6.1%', impressionsWow: -1.4, clicksWow: -3.4, ctrWow: -0.7, sessionsWow: -3.3, leadSubmissionWow: 9.4, lrWow: 0.7 },
+                { date: '07/21/2025', impressions: 6909, clicks: 2398, ctr: '34.7%', sessions: 798, leadSubmission: 8, lr: '1.0%', impressionsWow: -8.8, clicksWow: -6.0, ctrWow: 1.0, sessionsWow: -16.2, leadSubmissionWow: -86.2, lrWow: -5.1 }
+            ]
+        };
+        
+        let currentCountry = 'Argentina';
+        let chartInterval;
+        let imprClicksChartInstance = null;
+        let sessLeadsChartInstance = null;
+
+        const parseFloatPercentage = (s) => s ? parseFloat(s.replace('%', '')) : 0;
+
+        function createMetricCard(title, value, wowValue, unit = '', isRate = false, isCritical = false) {
+            const isWowPp = ['CTR', 'LR'].includes(title);
+            const wowSign = wowValue > 0 ? '+' : '';
+            const wowColor = wowValue > 0 ? 'text-[var(--oe-green)]' : 'text-[var(--oe-red)]';
+            const wowIcon = wowValue > 0 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m17 10-5-5-5 5"/></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m17 14-5 5-5-5"/></svg>`;
+            
+            const wowText = wowValue !== null ? `${wowSign}${wowValue.toFixed(1)}${isWowPp ? ' p.p' : '%'}` : 'N/A';
+            const pulseClass = isCritical ? 'pulse-critical' : '';
+
+            return `
+                <div class="bg-white p-4 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:-translate-y-1 ${pulseClass}">
+                    <h4 class="font-medium text-slate-500 text-sm">${title}</h4>
+                    <p class="text-3xl font-bold text-[var(--oe-dark-blue)] my-2">${value}${unit}</p>
+                    <div class="flex items-center ${wowColor} font-semibold">
+                        ${wowValue !== null ? wowIcon : ''}
+                        <span class="ml-1 text-base">${wowText}</span>
+                        <span class="text-slate-400 font-normal ml-1 text-sm">vs sem. ant.</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- LÓGICA DE CONCLUSIÓN ANALÍTICA MEJORADA ---
+        function generateConclusion(data, country) {
+            if (!data || data.sessionsWow === null) {
+                return 'Datos insuficientes para generar una conclusión.';
+            }
+
+            const { impressionsWow, clicksWow, sessionsWow, leadSubmissionWow, lrWow } = data;
+            
+            const f = (val) => (val >= 0 ? `+${val.toFixed(1)}` : val.toFixed(1));
+            const color = (val) => (val >= 0 ? 'text-[var(--oe-green)]' : 'text-[var(--oe-red)]');
+
+            let diagnosis = '';
+            let recommendation = '';
+
+            // --- DIAGNOSIS ---
+            let trafficStory = '';
+            if (impressionsWow < -10 && clicksWow < -10) {
+                trafficStory = `una <strong class="${color(impressionsWow)}">fuerte contracción en el volumen de tráfico</strong> (Impresiones ${f(impressionsWow)}%, Clics ${f(clicksWow)}%).`;
+            } else if (impressionsWow > 10 && clicksWow > 10) {
+                trafficStory = `un <strong class="${color(impressionsWow)}">sólido crecimiento en el volumen de tráfico</strong> (Impresiones ${f(impressionsWow)}%, Clics ${f(clicksWow)}%).`;
+            } else {
+                trafficStory = `un volumen de tráfico con una variación de <strong class="${color(impressionsWow)}">${f(impressionsWow)}%</strong> en Impresiones y <strong class="${color(clicksWow)}">${f(clicksWow)}%</strong> en Clics.`;
+            }
+
+            let siteStory = '';
+            if (sessionsWow < -15 || leadSubmissionWow < -15) {
+                siteStory = `Sin embargo, se detecta una <strong class="text-[var(--oe-red)]">alerta crítica en el rendimiento del sitio</strong>, con una caída de Sesiones del <strong class="${color(sessionsWow)}">${f(sessionsWow)}%</strong> y de Lead Submissions del <strong class="${color(leadSubmissionWow)}">${f(leadSubmissionWow)}%</strong>.`;
+            } else if (sessionsWow > 10 && leadSubmissionWow > 10) {
+                siteStory = `Este tráfico se ha traducido en un <strong class="text-[var(--oe-green)]">excelente rendimiento en el sitio</strong>, con un aumento de Sesiones del <strong class="${color(sessionsWow)}">${f(sessionsWow)}%</strong> y de Lead Submissions del <strong class="${color(leadSubmissionWow)}">${f(leadSubmissionWow)}%</strong>.`;
+            } else {
+                siteStory = `El rendimiento en el sitio muestra una variación de <strong class="${color(sessionsWow)}">${f(sessionsWow)}%</strong> en Sesiones y <strong class="${color(leadSubmissionWow)}">${f(leadSubmissionWow)}%</strong> en Lead Submissions.`;
+            }
+
+            diagnosis = `Para <strong>${country}</strong>, el análisis del último día muestra ${trafficStory} ${siteStory}`;
+
+            // --- RECOMMENDATION ---
+            if (sessionsWow < -15 || leadSubmissionWow < -15) {
+                recommendation = `El desplome de la tasa LR (<strong class="${color(lrWow)}">${f(lrWow)} p.p.</strong>) confirma que la prioridad es <strong class="text-[var(--oe-dark-blue)]">investigar y optimizar la experiencia post-clic</strong>. Analizar la página de destino en busca de fricciones, tiempos de carga o mensajes inconsistentes es el siguiente paso crucial.`;
+            } else if (impressionsWow < -10 && clicksWow < -10) {
+                 recommendation = `Aunque el rendimiento del sitio es mejorable, la <strong class="text-[var(--oe-dark-blue)]">prioridad es reactivar la generación de tráfico</strong>. Se debe revisar la segmentación y los creativos de las campañas para incrementar el volumen de impresiones y clics.`;
+            } else if (sessionsWow > 10 && leadSubmissionWow > 10) {
+                recommendation = `La estrategia actual es exitosa. La recomendación es <strong class="text-[var(--oe-dark-blue)]">analizar los componentes clave de este éxito</strong> (campañas, creativos, landing page) para replicarlos y buscar oportunidades de escalamiento.`;
+            } else {
+                 if(lrWow < -1){
+                    recommendation = `La eficiencia del funnel se ha deteriorado, con una caída del LR de <strong class="text-[var(--oe-red)]">${f(lrWow)} p.p.</strong> Es importante analizar si los cambios en las campañas están atrayendo un público menos calificado o si hay nuevas fricciones en el sitio.`;
+                } else {
+                    recommendation = `El rendimiento no presenta alertas críticas. Es un escenario ideal para <strong class="text-[var(--oe-dark-blue)]">realizar pruebas A/B controladas</strong> y buscar optimizaciones incrementales tanto en las campañas como en la página de destino para impulsar el crecimiento.`;
+                }
+            }
+            
+            return `${diagnosis}<br><br>${recommendation}`;
+        }
+
+
+        function updateDashboard(country) {
+            const performanceData = allData[country];
+            const metricsGrid = document.getElementById('latest-metrics-grid');
+            const conclusionTextEl = document.getElementById('conclusion-text');
+
+            // Limpiar contenido anterior
+            metricsGrid.innerHTML = '';
+            conclusionTextEl.innerHTML = 'No hay datos disponibles para este país.';
+
+            if (!performanceData || performanceData.length === 0) {
+                 if (imprClicksChartInstance) imprClicksChartInstance.destroy();
+                 if (sessLeadsChartInstance) sessLeadsChartInstance.destroy();
+                 document.getElementById('latest-date').textContent = 'N/A';
+                 return;
+            }
+
+            const latestData = performanceData[performanceData.length - 1];
+            document.getElementById('latest-date').textContent = latestData.date;
+
+            // Renderizar tarjetas de métricas
+            const cards = [
+                createMetricCard('Impressions', latestData.impressions.toLocaleString('es-AR'), latestData.impressionsWow),
+                createMetricCard('Clicks', latestData.clicks.toLocaleString('es-AR'), latestData.clicksWow),
+                createMetricCard('CTR', latestData.ctr, latestData.ctrWow, '', true),
+                createMetricCard('Sessions', latestData.sessions.toLocaleString('es-AR'), latestData.sessionsWow, '', false, latestData.sessionsWow < -15),
+                createMetricCard('Lead Submission', latestData.leadSubmission.toLocaleString('es-AR'), latestData.leadSubmissionWow, '', false, latestData.leadSubmissionWow < -50),
+                createMetricCard('LR', latestData.lr, latestData.lrWow, '', true, latestData.lrWow < -4.0)
+            ];
+            cards.forEach((card, index) => {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.innerHTML = card;
+                metricsGrid.appendChild(cardWrapper);
+            });
+
+            conclusionTextEl.innerHTML = generateConclusion(latestData, country);
+
+            // --- Lógica de Gráficos ---
+            if (imprClicksChartInstance) imprClicksChartInstance.destroy();
+            if (sessLeadsChartInstance) sessLeadsChartInstance.destroy();
+
+            const labels = performanceData.map(d => d.date);
+            const commonChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { left: 10, right: 20, top: 10, bottom: 0 } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Volumen' } },
+                    y1: { 
+                        type: 'linear', display: true, position: 'right', 
+                        title: { display: true, text: 'Porcentaje (%)' }, 
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: function(value) { return value.toFixed(0) + '%'; } }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 14, family: 'Inter' }, usePointStyle: false, boxWidth: 20, padding: 20 } },
+                    tooltip: {
+                        enabled: true, backgroundColor: 'var(--oe-dark-blue)', titleFont: { weight: 'bold' },
+                        bodyFont: { size: 12 }, padding: 12, cornerRadius: 8, boxPadding: 4,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    if (context.dataset.yAxisID === 'y1') {
+                                        label += context.parsed.y.toFixed(1) + '%';
+                                    } else {
+                                        label += context.parsed.y.toLocaleString('es-AR');
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const commonPointStyles = {
+                pointBackgroundColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            };
+
+            const imprClicksCtx = document.getElementById('imprClicksChart').getContext('2d');
+            imprClicksChartInstance = new Chart(imprClicksCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Impressions', data: performanceData.map(d => d.impressions), borderColor: 'var(--chart-light-blue)', backgroundColor: 'rgba(150, 220, 248, 0.2)', fill: true, tension: 0.4, yAxisID: 'y', borderWidth: 2.5, pointBorderColor: 'var(--chart-light-blue)', ...commonPointStyles },
+                        { label: 'Clicks', data: performanceData.map(d => d.clicks), borderColor: 'var(--chart-dark-blue)', backgroundColor: 'rgba(11, 118, 160, 0.2)', fill: true, tension: 0.4, yAxisID: 'y', borderWidth: 2.5, pointBorderColor: 'var(--chart-dark-blue)', ...commonPointStyles },
+                        { 
+                            label: 'CTR', 
+                            data: performanceData.map(d => parseFloatPercentage(d.ctr)), 
+                            borderColor: 'var(--oe-dark-blue)', 
+                            backgroundColor: 'transparent',
+                            borderWidth: 2, 
+                            borderDash: [5, 5], 
+                            tension: 0.4, 
+                            yAxisID: 'y1', 
+                            pointBorderColor: 'var(--oe-dark-blue)', 
+                            fill: false, 
+                            ...commonPointStyles 
+                        }
+                    ]
+                },
+                options: commonChartOptions,
+            });
+
+            const sessLeadsCtx = document.getElementById('sessLeadsChart').getContext('2d');
+            sessLeadsChartInstance = new Chart(sessLeadsCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Sessions', data: performanceData.map(d => d.sessions), borderColor: 'var(--chart-light-blue)', backgroundColor: 'rgba(150, 220, 248, 0.2)', fill: true, tension: 0.4, yAxisID: 'y', borderWidth: 2.5, pointBorderColor: 'var(--chart-light-blue)', ...commonPointStyles },
+                        { label: 'Lead Submission', data: performanceData.map(d => d.leadSubmission), borderColor: 'var(--chart-dark-blue)', backgroundColor: 'rgba(11, 118, 160, 0.2)', fill: true, tension: 0.4, yAxisID: 'y', borderWidth: 2.5, pointBorderColor: 'var(--chart-dark-blue)', ...commonPointStyles },
+                        { 
+                            label: 'LR', 
+                            data: performanceData.map(d => parseFloatPercentage(d.lr)), 
+                            borderColor: 'var(--oe-dark-blue)', 
+                            backgroundColor: 'transparent',
+                            borderWidth: 2, 
+                            borderDash: [5, 5], 
+                            tension: 0.4, 
+                            yAxisID: 'y1', 
+                            pointBorderColor: 'var(--oe-dark-blue)', 
+                            fill: false, 
+                            ...commonPointStyles 
+                        }
+                    ]
+                },
+                options: commonChartOptions,
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Lógica del selector de país
+            const countrySelector = document.getElementById('country-selector');
+            countrySelector.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const selectedCountry = e.target.dataset.country;
+                    if (selectedCountry === currentCountry) return;
+
+                    // Actualizar estilo de botones
+                    countrySelector.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    
+                    currentCountry = selectedCountry;
+                    updateDashboard(currentCountry);
+                }
+            });
+
+            // Lógica del conmutador de gráficos
+            const btnImprClicks = document.getElementById('btn-impr-clicks');
+            const btnSessLeads = document.getElementById('btn-sess-leads');
+            const imprClicksChartEl = document.getElementById('imprClicksChart');
+            const sessLeadsChartEl = document.getElementById('sessLeadsChart');
+            
+            let currentChart = 'imprClicks';
+
+            const showChart = (chartName) => {
+                currentChart = chartName;
+                if (chartName === 'imprClicks') {
+                    imprClicksChartEl.style.display = 'block';
+                    sessLeadsChartEl.style.display = 'none';
+                    btnImprClicks.classList.add('active');
+                    btnSessLeads.classList.remove('active');
+                } else {
+                    imprClicksChartEl.style.display = 'none';
+                    sessLeadsChartEl.style.display = 'block';
+                    btnImprClicks.classList.remove('active');
+                    btnSessLeads.classList.add('active');
+                }
+            };
+
+            btnImprClicks.addEventListener('click', () => showChart('imprClicks'));
+            btnSessLeads.addEventListener('click', () => showChart('sessLeads'));
+            
+            // --- LÓGICA DE ANIMACIÓN DE GRÁFICOS MEJORADA ---
+            const startInterval = () => {
+                // Asegurarse de que no haya intervalos duplicados
+                stopInterval(); 
+                chartInterval = setInterval(() => {
+                    const nextChart = currentChart === 'imprClicks' ? 'sessLeads' : 'imprClicks';
+                    showChart(nextChart);
+                }, 15000); // Intervalo de 15 segundos
+            };
+
+            const stopInterval = () => {
+                clearInterval(chartInterval);
+            };
+            
+            // Pausar la animación al pasar el mouse sobre áreas clave
+            const pauseAreas = [
+                document.getElementById('metrics-section'),
+                document.getElementById('charts-section'),
+                document.getElementById('country-selector')
+            ];
+
+            pauseAreas.forEach(area => {
+                area.addEventListener('mouseenter', stopInterval);
+                area.addEventListener('mouseleave', startInterval);
+            });
+
+            // Carga inicial
+            updateDashboard(currentCountry);
+            startInterval();
+        });
+    </script>
+</body>
+</html>
