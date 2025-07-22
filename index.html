@@ -199,6 +199,10 @@
         let chartInterval;
         let imprClicksChartInstance = null;
         let sessLeadsChartInstance = null;
+        
+        // --- Variables para los elementos del DOM ---
+        let btnImprClicks, btnSessLeads, imprClicksChartEl, sessLeadsChartEl;
+        let currentChart = 'imprClicks';
 
         const parseFloatPercentage = (s) => s ? parseFloat(s.replace('%', '')) : 0;
 
@@ -226,7 +230,6 @@
             `;
         }
         
-        // --- LÓGICA DE CONCLUSIÓN ANALÍTICA MEJORADA ---
         function generateConclusion(data, country) {
             if (!data || data.sessionsWow === null) {
                 return 'Datos insuficientes para generar una conclusión.';
@@ -240,7 +243,6 @@
             let diagnosis = '';
             let recommendation = '';
 
-            // --- DIAGNOSIS ---
             let trafficStory = '';
             if (impressionsWow < -10 && clicksWow < -10) {
                 trafficStory = `una <strong class="${color(impressionsWow)}">fuerte contracción en el volumen de tráfico</strong> (Impresiones ${f(impressionsWow)}%, Clics ${f(clicksWow)}%).`;
@@ -261,7 +263,6 @@
 
             diagnosis = `Para <strong>${country}</strong>, el análisis del último día muestra ${trafficStory} ${siteStory}`;
 
-            // --- RECOMMENDATION ---
             if (sessionsWow < -15 || leadSubmissionWow < -15) {
                 recommendation = `El desplome de la tasa LR (<strong class="${color(lrWow)}">${f(lrWow)} p.p.</strong>) confirma que la prioridad es <strong class="text-[var(--oe-dark-blue)]">investigar y optimizar la experiencia post-clic</strong>. Analizar la página de destino en busca de fricciones, tiempos de carga o mensajes inconsistentes es el siguiente paso crucial.`;
             } else if (impressionsWow < -10 && clicksWow < -10) {
@@ -279,13 +280,26 @@
             return `${diagnosis}<br><br>${recommendation}`;
         }
 
+        const showChart = (chartName) => {
+            currentChart = chartName;
+            if (chartName === 'imprClicks') {
+                imprClicksChartEl.style.display = 'block';
+                sessLeadsChartEl.style.display = 'none';
+                btnImprClicks.classList.add('active');
+                btnSessLeads.classList.remove('active');
+            } else {
+                imprClicksChartEl.style.display = 'none';
+                sessLeadsChartEl.style.display = 'block';
+                btnImprClicks.classList.remove('active');
+                btnSessLeads.classList.add('active');
+            }
+        };
 
         function updateDashboard(country) {
             const performanceData = allData[country];
             const metricsGrid = document.getElementById('latest-metrics-grid');
             const conclusionTextEl = document.getElementById('conclusion-text');
 
-            // Limpiar contenido anterior
             metricsGrid.innerHTML = '';
             conclusionTextEl.innerHTML = 'No hay datos disponibles para este país.';
 
@@ -299,7 +313,6 @@
             const latestData = performanceData[performanceData.length - 1];
             document.getElementById('latest-date').textContent = latestData.date;
 
-            // Renderizar tarjetas de métricas
             const cards = [
                 createMetricCard('Impressions', latestData.impressions.toLocaleString('es-AR'), latestData.impressionsWow),
                 createMetricCard('Clicks', latestData.clicks.toLocaleString('es-AR'), latestData.clicksWow),
@@ -308,15 +321,17 @@
                 createMetricCard('Lead Submission', latestData.leadSubmission.toLocaleString('es-AR'), latestData.leadSubmissionWow, '', false, latestData.leadSubmissionWow < -50),
                 createMetricCard('LR', latestData.lr, latestData.lrWow, '', true, latestData.lrWow < -4.0)
             ];
-            cards.forEach((card, index) => {
+            cards.forEach((card) => {
                 const cardWrapper = document.createElement('div');
                 cardWrapper.innerHTML = card;
                 metricsGrid.appendChild(cardWrapper);
             });
 
             conclusionTextEl.innerHTML = generateConclusion(latestData, country);
+            
+            // --- CORRECCIÓN: Resetear la vista de la gráfica al cambiar de país ---
+            showChart('imprClicks');
 
-            // --- Lógica de Gráficos ---
             if (imprClicksChartInstance) imprClicksChartInstance.destroy();
             if (sessLeadsChartInstance) sessLeadsChartInstance.destroy();
 
@@ -420,6 +435,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // --- Inicialización de elementos del DOM ---
+            btnImprClicks = document.getElementById('btn-impr-clicks');
+            btnSessLeads = document.getElementById('btn-sess-leads');
+            imprClicksChartEl = document.getElementById('imprClicksChart');
+            sessLeadsChartEl = document.getElementById('sessLeadsChart');
+
             // Lógica del selector de país
             const countrySelector = document.getElementById('country-selector');
             countrySelector.addEventListener('click', (e) => {
@@ -427,7 +448,6 @@
                     const selectedCountry = e.target.dataset.country;
                     if (selectedCountry === currentCountry) return;
 
-                    // Actualizar estilo de botones
                     countrySelector.querySelector('.active').classList.remove('active');
                     e.target.classList.add('active');
                     
@@ -437,46 +457,21 @@
             });
 
             // Lógica del conmutador de gráficos
-            const btnImprClicks = document.getElementById('btn-impr-clicks');
-            const btnSessLeads = document.getElementById('btn-sess-leads');
-            const imprClicksChartEl = document.getElementById('imprClicksChart');
-            const sessLeadsChartEl = document.getElementById('sessLeadsChart');
-            
-            let currentChart = 'imprClicks';
-
-            const showChart = (chartName) => {
-                currentChart = chartName;
-                if (chartName === 'imprClicks') {
-                    imprClicksChartEl.style.display = 'block';
-                    sessLeadsChartEl.style.display = 'none';
-                    btnImprClicks.classList.add('active');
-                    btnSessLeads.classList.remove('active');
-                } else {
-                    imprClicksChartEl.style.display = 'none';
-                    sessLeadsChartEl.style.display = 'block';
-                    btnImprClicks.classList.remove('active');
-                    btnSessLeads.classList.add('active');
-                }
-            };
-
             btnImprClicks.addEventListener('click', () => showChart('imprClicks'));
             btnSessLeads.addEventListener('click', () => showChart('sessLeads'));
             
-            // --- LÓGICA DE ANIMACIÓN DE GRÁFICOS MEJORADA ---
             const startInterval = () => {
-                // Asegurarse de que no haya intervalos duplicados
                 stopInterval(); 
                 chartInterval = setInterval(() => {
                     const nextChart = currentChart === 'imprClicks' ? 'sessLeads' : 'imprClicks';
                     showChart(nextChart);
-                }, 15000); // Intervalo de 15 segundos
+                }, 15000);
             };
 
             const stopInterval = () => {
                 clearInterval(chartInterval);
             };
             
-            // Pausar la animación al pasar el mouse sobre áreas clave
             const pauseAreas = [
                 document.getElementById('metrics-section'),
                 document.getElementById('charts-section'),
